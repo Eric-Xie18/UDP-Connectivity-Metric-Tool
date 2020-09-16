@@ -1,0 +1,7 @@
+option java_package = "ca.NetSysLab.ProtocolBuffers";
+option java_outer_classname = "ResponsePayload";
+
+message ResPayload {
+    required bytes serverResponse = 1;
+    required int32 payloadSize = 2;
+}

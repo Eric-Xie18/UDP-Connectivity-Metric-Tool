@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<qualifiedTypeNameHistroy>
+<fullyQualifiedTypeName name="java.net.DatagramSocket"/>
+<fullyQualifiedTypeName name="java.net.DatagramPacket"/>
+<fullyQualifiedTypeName name="ca.NetSysLab.ProtocolBuffers.Message.Msg"/>
+<fullyQualifiedTypeName name="java.io.IOException"/>
+<fullyQualifiedTypeName name="com.google.protobuf.ByteString"/>
+<fullyQualifiedTypeName name="java.io.ByteArrayOutputStream"/>
+<fullyQualifiedTypeName name="java.util.zip.CRC32"/>
+<fullyQualifiedTypeName name="com.google.protobuf.InvalidProtocolBufferException"/>
+<fullyQualifiedTypeName name="ca.NetSysLab.ProtocolBuffers.RequestPayload.ReqPayload"/>
+<fullyQualifiedTypeName name="java.util.Random"/>
+<fullyQualifiedTypeName name="ca.NetSysLab.ProtocolBuffers.ResponsePayload.ResPayload"/>
+<fullyQualifiedTypeName name="ca.NetSysLab.ProtocolBuffers.ResponsePayload.ResPayload.Builder"/>
+<fullyQualifiedTypeName name="ca.NetSysLab.ProtocolBuffers.Message.Msg.Builder"/>
+</qualifiedTypeNameHistroy>

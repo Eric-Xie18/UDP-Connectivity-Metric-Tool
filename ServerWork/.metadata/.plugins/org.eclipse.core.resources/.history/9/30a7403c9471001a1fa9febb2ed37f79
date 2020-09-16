@@ -1,0 +1,13 @@
+package com.udpServer.server2020;
+
+
+public class App 
+{
+	
+	private final static int SERVERPORT = 50000;
+	
+    public static void main( String[] args )
+    {
+        System.out.println( "Hello World!" );
+    }
+}

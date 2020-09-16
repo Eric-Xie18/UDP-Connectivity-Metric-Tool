@@ -1,0 +1,20 @@
+package com.udpServer.server2020;
+
+import java.net.DatagramSocket;
+import java.net.SocketException;
+
+public class App 
+{
+	
+	private final static int SERVERPORT = 50000;
+	
+    public static void main( String[] args ) throws SocketException
+    {
+    	 DatagramSocket socket = new DatagramSocket(SERVERPORT);
+    	 
+    	 while(true) {
+    		 
+    		 
+    	 }
+    }
+}

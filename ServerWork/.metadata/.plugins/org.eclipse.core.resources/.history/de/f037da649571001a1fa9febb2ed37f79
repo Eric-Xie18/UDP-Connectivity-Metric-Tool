@@ -1,0 +1,347 @@
+package com.udpServer.server2020;
+
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
+import java.net.SocketException;
+import java.util.zip.CRC32;
+
+import com.google.protobuf.ByteString;
+
+import ca.NetSysLab.ProtocolBuffers.Message.Msg;
+
+public class App 
+{
+	
+	private final static int SERVERPORT = 50000;
+	private final static int MAXSIZE = 100000;
+	
+    public static void main( String[] args ) throws SocketException
+    {
+    	 DatagramSocket socket = new DatagramSocket(SERVERPORT);
+    	 byte[] receive;
+    	 DatagramPacket get;
+    	 byte[] receiveByte;
+    	 
+    	 while (true) {
+             receive = new byte[MAXSIZE];
+             get = new DatagramPacket(receive, receive.length);        
+   					try {
+   						socket.receive(get);
+   					
+   		  receiveByte = new byte[get.getLength()];
+   					for(int i=0;i<get.getLength();i++) {
+   	                receiveByte[i] = receive[i];
+   					}
+   					
+   	               try {
+   	               Msg response =  Msg.parseFrom(receiveByte);
+   	                int messageID = response.getMessageID(); 
+	         	   cacheResponse = replyCache.getIfPresent(messageID);
+   	   
+   	         	  
+   	         	   
+   	         	  // ignore malformed request 
+   	         	  if(!isCheckSumMatch(response.getMessageID(),response.getPayload(),response.getCheckSum())) {
+   	         		  continue;
+   	         	  }
+   	         	   
+   	         	   
+   	             // reply to cached request
+   	         	   else if(cacheResponse!=null) {
+   	         		   payLoad = response.getPayload();
+   	         		   request =KVRequest.parseFrom(payLoad);
+   	         		 
+   	         		  sendCachedResponse(messageID, cacheResponse, get.getAddress(), get.getPort());
+   	         	   }
+   	         	   
+   	         	   
+   	        	   // out of space
+   	         	   else if(KVS_MEMORY>=INTERNAL_MEMORY_LIMIT) {
+   	         		   System.out.println("System out of space");
+   	         		   payLoad = response.getPayload();
+   	         		   request =KVRequest.parseFrom(payLoad);
+   	         		   command = request.getCommand();
+   	         		   int error = SUCCESS_ERR_CODE;
+   	         		   if(command!=PUT_COMMAND) {
+   	         			   
+   	 	         		  // start of get
+   		         		    if(command==GET_COMMAND) {
+   		         			       invalid = false;
+   		         		        if(!request.hasKey()) {
+   		         		        	error = INVALID_KEY_ERR_CODE;
+   		         		        	invalid = true;
+   		         		        }        
+   		         		        
+   		         		        else if(!hasKVS(request.getKey())) {
+   		         		        	error = NON_EXIST_ERR_CODE;
+   		         		        	invalid = true;
+   		         		        }
+   		         		        
+   		         		         if (invalid) {
+   		         		        	 respondInvalid(error, messageID,get.getAddress(),get.getPort()); 
+   		         		         }
+   		         		          
+   		         		         else {
+   		         		        	 respondGet(messageID,get.getAddress(),get.getPort(),request.getKey());
+   		         		        	 
+   		         		         }
+   		         		        
+   		                }
+   		         	     // end of get
+   	         			   
+   	         			   
+   	         			   
+   	 	          		 // start of remove
+   		         		    else if(command==REMOVE_COMMAND) { 
+   	 	         			        invalid = false;
+   	 	         		        if(!request.hasKey()) {
+   	 	         		        	error = INVALID_KEY_ERR_CODE;
+   	 	         		        	invalid = true;
+   	 	         		        }        
+   	 	         		        
+   	 	         		        else if(!hasKVS(request.getKey())) {
+   	 	         		        	error = NON_EXIST_ERR_CODE;
+   	 	         		        	invalid = true;
+   	 	         		        }
+   	 	         		        
+   	 	         		         if (invalid) {
+   	 	         		        	  respondInvalid(error, messageID,get.getAddress(),get.getPort()); 
+   	 	         		         }
+   	 	         		          
+   	 	         		         else {
+   	 	         		        	 respondDelete(messageID,get.getAddress(),get.getPort(),request.getKey());
+   	 	         		        	 
+   	 	         		         }
+   	 	         			  
+   	 	                }
+   	 	         	     // end of remove
+   	 	         		  
+   	 	         		// start of shutdown
+   	 	         		  else if(command==SHUTDOWN_COMMAND) { 
+   	 	         			respondShutDown();         
+   	 	                }
+   	 	         	     // end of shutdown
+   	 	         		 
+   	 	         		// start of wipeout
+   	 	         		  else if(command==WIPEOUT_COMMAND) { 
+   	 	         			respondDeleteAll(messageID,get.getAddress(),get.getPort());  
+   	 	         			System.gc();
+   	 	         			Thread.sleep(200);
+   	 	                }
+   	 	         	     // end of wipeout
+   	 	         		  
+   	 	         		// start of is alive
+   	 	         		  else if(command==ISALIVE_COMMAND) { 
+   	 	         			respondAlive(messageID,get.getAddress(),get.getPort());            
+   	 	                }
+   	 	         	     // end of is alive
+   	 	         		
+   	 	         		// start of getpid
+   	 	         		  else if(command==GETPID_COMMAND) { 
+   	 	         			 getPid(messageID,get.getAddress(),get.getPort());         
+   	 	                }
+   	 	         	     // end of getpid
+   	 	         		 
+   	 	         		 //start of get membership count
+   	 	         		  else if(command==GET_MBS_CNT_COMMAND) { 
+   	 	         			getMembershipCount(messageID,get.getAddress(),get.getPort());
+   	 	                }
+   	 	         	     // end of get membership count
+   	 	         		
+   	 	         		// start of custom defined command
+   	 	         		  else if(command>ANYTHING_COMMAND) {
+   	 	         			unrecognizedCommand(messageID,get.getAddress(),get.getPort());
+   	 	         		}
+   	 	         		
+   	 	         		
+   	 	         		  else {
+   	 	         			unrecognizedCommand(messageID,get.getAddress(),get.getPort());
+   	 	         		}
+   	         			   
+   	         			   
+   	         		   }
+   	         		   else {
+   	         		   sendOOSResponse(messageID,get.getAddress(),get.getPort());
+   	         	   }
+   	         		  System.gc();
+   	         		   
+   	         	   }
+   	         	   
+   	         	
+   	         	   else if((CACHE_MEMORY>=CACHE_HARD_LIMIT)||(SOFT_SIZE<replyCache.size())) {
+   	         		   System.out.println("System over load");
+   	         		  sendOverloadResponse(messageID,get.getAddress(),get.getPort());
+   	     		   }
+   	               
+   	         	   else {
+   	         		   
+   	         		   payLoad = response.getPayload();
+   	         		   request =KVRequest.parseFrom(payLoad);
+   	         		   command = request.getCommand();
+   	         		   int error = SUCCESS_ERR_CODE;
+   	         		   
+   	         		   // start of put
+   	         		   if(command==PUT_COMMAND) {// request doesn't have a key
+   	         			      invalid = false;
+   	         			   if(!request.hasKey()) {
+   	         				   error = INVALID_KEY_ERR_CODE;
+   	         				   invalid = true;
+   	         			   }
+   	         			   else if(!isKeyValid(request.getKey())) {// invalid key value
+   	         				   error = INVALID_KEY_ERR_CODE;
+   	         				   invalid = true;
+   	         			   }
+   	         			   
+   	         			   if(!request.hasValue()) {// request  doesn't have a value
+   	         				   error = INVALID_VALUE_ERR_CODE;
+   	         				   invalid = true;
+   	         			   }
+   	         			   else if(!isValueValid(request.getValue())) { // invalid value 
+   	         				   error = INVALID_VALUE_ERR_CODE;
+   	         				   invalid = true;
+   	         			   }
+   	         			   
+   	         			   if(invalid) {
+   	         				  respondInvalid(error, messageID,get.getAddress(),get.getPort());  
+   	         			   }
+   	         			   else {
+   	         				  storeKV(request.getKey(), request.getValue(), request.getVersion(),messageID, get.getAddress(),get.getPort());
+   	         			   }
+   	         		   } // end of put
+   	         		   
+   	         		  
+   	         		  // start of get
+   	         		   else if(command==GET_COMMAND) {
+   	         			       invalid = false;
+   	         		        if(!request.hasKey()) {
+   	         		        	error = INVALID_KEY_ERR_CODE;
+   	         		        	invalid = true;
+   	         		        }        
+   	         		        
+   	         		        else if(!hasKVS(request.getKey())) {
+   	         		        	error = NON_EXIST_ERR_CODE;
+   	         		        	invalid = true;
+   	         		        }
+   	         		        
+   	         		         if (invalid) {
+   	         		        	 respondInvalid(error, messageID,get.getAddress(),get.getPort()); 
+   	         		         }
+   	         		          
+   	         		         else {
+   	         		        	 respondGet(messageID,get.getAddress(),get.getPort(),request.getKey());
+   	         		        	 
+   	         		         }
+   	         		        
+   	                }
+   	         	     // end of get
+   	         		  
+   	         		  
+   	         		 // start of remove
+   	         		  else if(command==REMOVE_COMMAND) { 
+   	         			        invalid = false;
+   	         		        if(!request.hasKey()) {
+   	         		        	error = INVALID_KEY_ERR_CODE;
+   	         		        	invalid = true;
+   	         		        }        
+   	         		        
+   	         		        else if(!hasKVS(request.getKey())) {
+   	         		        	error = NON_EXIST_ERR_CODE;
+   	         		        	invalid = true;
+   	         		        }
+   	         		        
+   	         		         if (invalid) {
+   	         		        	 respondInvalid(error, messageID,get.getAddress(),get.getPort()); 
+   	         		         }
+   	         		          
+   	         		         else {
+   	         		        	 respondDelete(messageID,get.getAddress(),get.getPort(),request.getKey());
+   	         		        	 
+   	         		         }
+   	         			  
+   	                }
+   	         	     // end of remove
+   	         		  
+   	         		// start of shutdown
+   	         		  else if(command==SHUTDOWN_COMMAND) { 
+   	         			respondShutDown();         
+   	                }
+   	         	     // end of shutdown
+   	         		 
+   	         		// start of wipeout
+   	         		  else if(command==WIPEOUT_COMMAND) { 
+   	         			respondDeleteAll(messageID,get.getAddress(),get.getPort());  
+   	                }
+   	         	     // end of wipeout
+   	         		  
+   	         		// start of is alive
+   	         		  else if(command==ISALIVE_COMMAND) { 
+   	         			respondAlive(messageID,get.getAddress(),get.getPort());            
+   	                }
+   	         	     // end of is alive
+   	         		
+   	         		// start of getpid
+   	         		  else if(command==GETPID_COMMAND) { 
+   	         			getPid(messageID,get.getAddress(),get.getPort());            
+   	                }
+   	         	     // end of getpid
+   	         		 
+   	         		 //start of get membership count
+   	         		  else if(command==GET_MBS_CNT_COMMAND) { 
+   	         			getMembershipCount(messageID,get.getAddress(), get.getPort());
+   	                }
+   	         	     // end of get membership count
+   	         		
+   	         		// start of custom defined command
+   	         		  else if(command>ANYTHING_COMMAND) {
+   	         			unrecognizedCommand(messageID,get.getAddress(),get.getPort());
+   	         		}
+   	         		
+   	         		
+   	         		  else {
+   	         			unrecognizedCommand(messageID,get.getAddress(),get.getPort());
+   	         		}
+   	         		
+   	         	     // end of unrecognized command
+   	         		
+   	               }
+   	         	  }  catch(InvalidProtocolBufferException b) {
+   	                	// a malformed packet
+   	                } catch (InterruptedException e) {
+   					// TODO Auto-generated catch block
+   					e.printStackTrace();
+   				}
+   	               
+   					} catch (IOException e) {
+   						// TODO Auto-generated catch block
+   						e.printStackTrace();
+   					}
+    }
+}
+    
+    
+    
+    
+    
+    
+    private static long getCheckSum(int messageID, ByteString payload) throws IOException {
+   	 CRC32 checksum = new CRC32();
+   	 ByteArrayOutputStream outputStream = new ByteArrayOutputStream( );
+        outputStream.write((byte)messageID);
+        outputStream.write(payload.toByteArray());
+        byte c[] = outputStream.toByteArray( );
+        checksum.update(c);
+   	return checksum.getValue();
+   }
+    
+    private static boolean isCheckSumMatch(int messageID,ByteString payLoad,long checksum) throws IOException {
+    	   ByteArrayOutputStream outputStream = new ByteArrayOutputStream( );
+    	   outputStream.write((byte)messageID);
+    	   outputStream.write(payLoad.toByteArray());
+    	   byte c[] = outputStream.toByteArray( );
+    	   CRC32 check = new CRC32();
+    	   check.update(c);
+    	   return(check.getValue()==checksum);
+    	} 
+
